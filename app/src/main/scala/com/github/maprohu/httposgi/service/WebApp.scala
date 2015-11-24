@@ -1,4 +1,4 @@
-package osgiapp.service
+package com.github.maprohu.httposgi.service
 
 import akka.http.scaladsl.server
 

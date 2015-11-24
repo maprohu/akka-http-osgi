@@ -1,10 +1,10 @@
-package osgiapp.sample
+package com.github.maprohu.httposgi.sample
 
 import akka.actor.ActorSystem
 import akka.http.scaladsl.server.Directives
 import akka.osgi.ActorSystemActivator
+import com.github.maprohu.httposgi.service.WebApp
 import org.osgi.framework.{BundleActivator, BundleContext, ServiceEvent, ServiceListener}
-import osgiapp.service.WebApp
 
 import scala.collection.JavaConversions
 import scala.concurrent.duration._

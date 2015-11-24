@@ -1,30 +1,72 @@
 import java.io.FileWriter
+import java.util.jar.Attributes
+
+import sbt.Package.ManifestAttributes
 
 import scala.xml.XML
+
+val githubRepo = "scalajs-jsdocgen"
 
 val akkaStreamVersion = "1.0"
 val akkaVersion = "2.3.12"
 val typesafeConfigVersion = "1.2.1"
 val osgiVersion = "5.0.0"
+val basePackage = "com.github.maprohu.httposgi"
 
 
-lazy val appName = "osgiapp"
+lazy val appName = "akka-http-osgi"
 
 lazy val features = TaskKey[File]("features")
 
 lazy val commonSettings = Seq(
-  organization := appName,
-  version := "1.2-SNAPSHOT",
+  organization := "com.github.maprohu",
+  version := "0.1.1-SNAPSHOT",
+  publishMavenStyle := true,
+  publishTo := {
+    val nexus = "https://oss.sonatype.org/"
+    if (isSnapshot.value)
+      Some("snapshots" at nexus + "content/repositories/snapshots")
+    else
+      Some("releases"  at nexus + "service/local/staging/deploy/maven2")
+  },
+  pomIncludeRepository := { _ => false },
+  licenses := Seq("BSD-style" -> url("http://www.opensource.org/licenses/bsd-license.php")),
+  homepage := Some(url(s"https://github.com/maprohu/${githubRepo}")),
+  pomExtra := (
+    <scm>
+      <url>git@github.com:maprohu/{githubRepo}.git</url>
+      <connection>scm:git:git@github.com:maprohu/{githubRepo}.git</connection>
+    </scm>
+      <developers>
+        <developer>
+          <id>maprohu</id>
+          <name>maprohu</name>
+          <url>https://github.com/maprohu</url>
+        </developer>
+      </developers>
+    ),
+
   scalaVersion := "2.11.7",
   crossPaths := false,
-  OsgiKeys.additionalHeaders += ("-noee" -> "true"),
+  OsgiKeys.additionalHeaders ++= Map(
+    "-noee" -> "true",
+    Attributes.Name.IMPLEMENTATION_VERSION.toString -> version.value
+  ),
   publishArtifact in packageDoc := false
+
+//  packageOptions += Package.ManifestAttributes((Attributes.Name.IMPLEMENTATION_VERSION, version.value))
+
 )
 
+val noPublish = Seq(
+  publishArtifact := false,
+  publishTo := Some(Resolver.file("Unused transient repository", file("target/unusedrepo")))
+)
 
 lazy val app = project
   .enablePlugins(SbtOsgi)
   .settings(
+    osgiSettings,
     commonSettings,
     name := appName,
 
@@ -36,18 +78,20 @@ lazy val app = project
         "org.osgi" % "org.osgi.compendium" % osgiVersion % Provided
         //        "org.apache.karaf.bundle" % "org.apache.karaf.bundle.core" % "4.0.3" % Provided
       ),
-    osgiSettings,
     OsgiKeys.bundleSymbolicName := name.value,
-    OsgiKeys.bundleActivator := Some("osgiapp.Activator"),
+    OsgiKeys.bundleActivator := Some(s"$basePackage.Activator"),
+    OsgiKeys.privatePackage := Seq(
+      basePackage
+    ),
     OsgiKeys.exportPackage ++= Seq(
-      "osgiapp.service"
+      s"$basePackage.service"
     ),
 
     features := Def.task {
       val f = target.value / "features.xml"
       val node =
         <features name={name.value} xmlns="http://karaf.apache.org/xmlns/features/v1.3.0">
-          <feature name={name.value} version="1.0.0.SNAPSHOT">
+          <feature name={name.value} version={version.value}>
             <bundle>mvn:org.scala-lang/scala-library/{scalaVersion.value}</bundle>
             <bundle>mvn:org.scala-lang/scala-reflect/{scalaVersion.value}</bundle>
             <bundle>mvn:org.reactivestreams/reactive-streams/1.0.0</bundle>
@@ -73,16 +117,15 @@ lazy val sample = project
   .enablePlugins(SbtOsgi)
   .dependsOn(app)
   .settings(
+    osgiSettings,
     commonSettings,
     name := appName + "-sample",
-    version := "1.2-SNAPSHOT",
 
-    osgiSettings,
     OsgiKeys.privatePackage := Seq(
-      "osgiapp.sample"
+      s"$basePackage.sample"
     ),
     OsgiKeys.bundleSymbolicName := name.value,
-    OsgiKeys.bundleActivator := Some("osgiapp.sample.Activator")
+    OsgiKeys.bundleActivator := Some(s"$basePackage.sample.Activator")
   )
 
 
@@ -90,5 +133,5 @@ lazy val sample = project
 lazy val root = (project in file("."))
   .aggregate(app, sample)
   .settings(
-    publishArtifact := false
+    noPublish
   )

@@ -1,9 +1,9 @@
-package osgiapp
+package com.github.maprohu.httposgi
+
 
 import akka.actor.ActorSystem
 import akka.event.Logging
 import akka.http.scaladsl.{server, Http}
-import akka.http.scaladsl.Http.ServerBinding
 import akka.http.scaladsl.model.{HttpResponse, HttpRequest}
 import akka.http.scaladsl.server.Directives
 import akka.stream.ActorMaterializer
@@ -12,7 +12,7 @@ import akka.stream.scaladsl.Flow
 import scala.concurrent._
 import scala.concurrent.duration._
 
-class Server(implicit val system : ActorSystem) extends Directives {
+class Server(implicit val system : ActorSystem, materializer: ActorMaterializer) extends Directives {
 
   val timeout = 10 seconds
 
@@ -20,7 +20,6 @@ class Server(implicit val system : ActorSystem) extends Directives {
   var routeMap : Map[String, server.Route] = Map()
 
   implicit val executor = system.dispatcher
-  implicit val materializer = ActorMaterializer()
 
   val logger = Logging(system, getClass)
 
@@ -47,9 +46,13 @@ class Server(implicit val system : ActorSystem) extends Directives {
 
   val handler: Flow[HttpRequest, HttpResponse, Any] = routes
 
+
   val http = Http()
-  val binding = http.bindAndHandle(handler, "0.0.0.0", 8888)
-//  val binding = http.bindAndHandle(routes, "0.0.0.0", 8888)
+  val binding = http.bindAndHandle(
+    handler,
+    interface = "127.0.0.1",
+    port = 8888
+  )
   binding.onComplete(r => system.log.info(r.toString))
 
   def stop(): Unit = {
