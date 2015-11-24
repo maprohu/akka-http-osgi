@@ -28,7 +28,8 @@ class Server(implicit val system : ActorSystem) extends Directives {
     get {
       pathEndOrSingleSlash {
         complete {
-          routeMap.keys.mkString(", ")
+          "available: " +
+            routeMap.keys.mkString(", ")
         }
       }
     } ~
