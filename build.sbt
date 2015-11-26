@@ -76,7 +76,7 @@ lazy val deps = project
       .filter(moduleFilter(-"org.scala-lang"))
       .allFiles,
     OsgiKeys.exportPackage := Seq(
-      "rx.*"
+//      "rx.*"
     ),
     excludeDependencies ++= Seq(
       SbtExclusionRule("jline"),

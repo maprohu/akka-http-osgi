@@ -11,9 +11,17 @@ import org.osgi.framework.BundleContext
   */
 class Activator extends ActorSystemActivator {
 
+  var system : ActorSystem = null
+
   override def configure(context: BundleContext, system: ActorSystem): Unit = {
     AOInitializer.init(system)
     system.log.info("AOSystem started")
+    this.system = system
   }
 
+  override def stop(context: BundleContext) = {
+    super.stop(context)
+    system.awaitTermination()
+    system = null
+  }
 }
