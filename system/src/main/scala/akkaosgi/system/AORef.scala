@@ -2,54 +2,29 @@ package akkaosgi.system
 
 import akka.actor.{PoisonPill, ActorRef}
 import akka.pattern.pipe
+import rx._
 
 /**
   * Created by pappmar on 25/11/2015.
   */
-trait AORef {
+trait AORef[T] {
 
-  object Changed
+  private val refs = Var(Seq[Rx[T]]())
+  val ref : Rx[Option[T]] = Rx(refs().headOption.map(_()))
 
-  def ref = _ref
 
-  @volatile
-  private var _ref : ActorRef = null
-
-  private var refs = Seq[ActorRef]()
-
-  def register(newRef: ActorRef): Unit = {
-    refs = newRef +: refs
-    _ref = newRef
-
-    publish
+  def register(value : T) : Var[T] = {
+    val v = Var(value)
+    register(v)
+    v
   }
 
-  def publish {
-    listeners foreach (_ ! Changed)
+  def register(value: Rx[T]) : Unit = this.synchronized {
+    refs() = value +: refs()
   }
 
-  def unregister(oldRef: ActorRef) = {
-    val old = _ref
-
-    refs = refs diff Seq(oldRef)
-    _ref = refs.headOption.getOrElse(null)
-
-    if (old != _ref) publish
-  }
-
-  def unregisterAndStop(oldRef: ActorRef) = {
-    unregister(oldRef)
-    oldRef ! PoisonPill
-  }
-
-  private var listeners = Set[ActorRef]()
-
-  def listen(listener: ActorRef): Unit = {
-    listeners += listener
-  }
-
-  def unlisten(listener: ActorRef) = {
-    listeners -= listener
+  def unregister(value: Rx[T]) : Unit = this.synchronized {
+    refs() = refs() diff Seq(value)
   }
 
 }

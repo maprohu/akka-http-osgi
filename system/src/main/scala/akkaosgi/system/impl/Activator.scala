@@ -2,7 +2,7 @@ package akkaosgi.system.impl
 
 import akka.actor.ActorSystem
 import akka.osgi.ActorSystemActivator
-import akkaosgi.system.AOSystem
+import akkaosgi.system.{AOInitializer, AOSystem}
 import org.osgi.framework.BundleContext
 
 
@@ -12,7 +12,7 @@ import org.osgi.framework.BundleContext
 class Activator extends ActorSystemActivator {
 
   override def configure(context: BundleContext, system: ActorSystem): Unit = {
-    AOSystem.init(system)
+    AOInitializer.init(system)
     system.log.info("AOSystem started")
   }
 

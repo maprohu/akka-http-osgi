@@ -7,12 +7,12 @@ import akkaosgi.system.impl.DefaultHttpActor
 /**
   * Created by pappmar on 25/11/2015.
   */
-object AOHttp extends AORef {
+object AOHttp extends AORef[Route] {
 
-  def register(route: Route) : ActorRef = {
-    val actor = AOSystem.actorSystem.actorOf(Props(classOf[DefaultHttpActor], route))
-    register(actor)
-    actor
-  }
+//  def register(route: Route) : ActorRef = {
+//    val actor = AOSystem.actorSystem.actorOf(Props(classOf[DefaultHttpActor], route))
+//    register(actor)
+//    actor
+//  }
 
 }

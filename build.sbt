@@ -13,6 +13,7 @@ lazy val features = TaskKey[File]("features")
 lazy val commonSettings = Seq(
   organization := "com.github.maprohu",
   version := "0.1.1-SNAPSHOT",
+  resolvers += Resolver.sonatypeRepo("snapshots"),
   publishMavenStyle := true,
   publishTo := {
     val nexus = "https://oss.sonatype.org/"
@@ -60,6 +61,30 @@ val noPublish = Seq(
   publishTo := Some(Resolver.file("Unused transient repository", file("target/unusedrepo")))
 )
 
+lazy val deps = project
+  .enablePlugins(SbtOsgi)
+  .settings(
+    commonSettings,
+    osgiSettings,
+    name := "akkaosgi-deps",
+    libraryDependencies ++= Seq(
+//      "com.lihaoyi" %% "scalarx" % "0.2.8"
+    ),
+    OsgiKeys.bundleActivator := None,
+    OsgiKeys.privatePackage := Seq(),
+    OsgiKeys.explodedJars := (update in Compile).value
+      .filter(moduleFilter(-"org.scala-lang"))
+      .allFiles,
+    OsgiKeys.exportPackage := Seq(
+      "rx.*"
+    ),
+    excludeDependencies ++= Seq(
+      SbtExclusionRule("jline"),
+      SbtExclusionRule("org.scala-lang.modules"),
+      SbtExclusionRule("org.osgi")
+    )
+
+  )
 
 lazy val system = project
   .enablePlugins(SbtOsgi)
@@ -69,7 +94,8 @@ lazy val system = project
     name := "akkaosgi-system",
     libraryDependencies ++= Seq(
       "com.typesafe.akka" %% "akka-osgi" % akkaVersion,
-      "com.typesafe.akka" %% "akka-http-experimental" % akkaStreamVersion
+      "com.typesafe.akka" %% "akka-http-experimental" % akkaStreamVersion,
+      "com.github.maprohu" %% "scalarx" % "0.2.8-SNAPSHOT"
     )
   )
 
