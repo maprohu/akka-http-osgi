@@ -160,6 +160,7 @@ lazy val routeSample = project
 
 
 lazy val root = (project in file("."))
+  .aggregate(system, routeSample)
   .settings(
     noPublish
   )
