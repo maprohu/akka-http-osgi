@@ -30,8 +30,6 @@ class DefaultHttpActor(routex: Rx[Option[Route]]) extends Actor with AOActor wit
           waiting
         )
       )
-    case x =>
-      println(x)
   }
 
   def working(route: Route) : Receive = {
