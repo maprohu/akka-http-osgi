@@ -12,7 +12,7 @@ lazy val features = TaskKey[File]("features")
 
 lazy val commonSettings = Seq(
   organization := "com.github.maprohu",
-  version := "0.1.1-SNAPSHOT",
+  version := "0.1.2-SNAPSHOT",
   resolvers += Resolver.sonatypeRepo("snapshots"),
   publishMavenStyle := true,
   publishTo := {
@@ -91,6 +91,7 @@ lazy val system = project
   .settings(
     commonSettings,
     osgiSettings,
+    description := "AkkaOsgi System",
     name := "akkaosgi-system",
     libraryDependencies ++= Seq(
       "com.typesafe.akka" %% "akka-osgi" % akkaVersion,
