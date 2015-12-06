@@ -12,7 +12,7 @@ lazy val features = TaskKey[File]("features")
 
 lazy val commonSettings = Seq(
   organization := "com.github.maprohu",
-  version := "0.1.2-SNAPSHOT",
+  version := "0.1.2",
   resolvers += Resolver.sonatypeRepo("snapshots"),
   publishMavenStyle := true,
   publishTo := {
@@ -20,7 +20,8 @@ lazy val commonSettings = Seq(
     if (isSnapshot.value)
       Some("snapshots" at nexus + "content/repositories/snapshots")
     else
-      Some("releases"  at nexus + "service/local/staging/deploy/maven2")
+//      Some("releases"  at nexus + "service/local/staging/deploy/maven2")
+      Some(sbtglobal.SbtGlobals.prodRepo)
   },
   pomIncludeRepository := { _ => false },
   licenses := Seq("BSD-style" -> url("http://www.opensource.org/licenses/bsd-license.php")),
