@@ -1,18 +1,21 @@
 import java.util.jar.Attributes
 
+import org.codehaus.plexus.util.xml.PrettyPrintXMLWriter
+
+import scala.xml.{NodeSeq, XML}
+
 val githubRepo = "scalajs-jsdocgen"
 
 val akkaStreamVersion = "1.0"
 val akkaVersion = "2.3.12"
 val typesafeConfigVersion = "1.2.1"
 val osgiVersion = "5.0.0"
+val scalarxVersion = "0.2.8"
 
+lazy val featuresXml = TaskKey[File]("features-xml")
 
-lazy val features = TaskKey[File]("features")
-
-lazy val commonSettings = Seq(
+lazy val publishSettings = Seq(
   organization := "com.github.maprohu",
-  version := "0.1.2",
   resolvers += Resolver.sonatypeRepo("snapshots"),
   publishMavenStyle := true,
   publishTo := {
@@ -41,7 +44,10 @@ lazy val commonSettings = Seq(
     ),
 
   scalaVersion := "2.11.7",
-  crossPaths := false,
+  crossPaths := false
+)
+
+lazy val commonSettings = publishSettings ++ Seq(
   OsgiKeys.additionalHeaders ++= Map(
     "-noee" -> "true",
     Attributes.Name.IMPLEMENTATION_VERSION.toString -> version.value
@@ -53,8 +59,6 @@ lazy val commonSettings = Seq(
   libraryDependencies ++= Seq(
     "org.osgi" % "org.osgi.core" % osgiVersion % Provided
   )
-
-
 )
 
 val noPublish = Seq(
@@ -68,6 +72,7 @@ lazy val deps = project
     commonSettings,
     osgiSettings,
     name := "akkaosgi-deps",
+    version := "0.1.0",
     libraryDependencies ++= Seq(
 //      "com.lihaoyi" %% "scalarx" % "0.2.8"
     ),
@@ -92,12 +97,13 @@ lazy val system = project
   .settings(
     commonSettings,
     osgiSettings,
+    version := "0.1.2",
     description := "AkkaOsgi System",
     name := "akkaosgi-system",
     libraryDependencies ++= Seq(
       "com.typesafe.akka" %% "akka-osgi" % akkaVersion,
       "com.typesafe.akka" %% "akka-http-experimental" % akkaStreamVersion,
-      "com.github.maprohu" %% "scalarx" % "0.2.8-SNAPSHOT"
+      "com.github.maprohu" %% "scalarx" % scalarxVersion
     )
   )
 
@@ -110,55 +116,58 @@ lazy val routeSample = project
     name := "akkaosgi-route-sample"
   )
 
-//lazy val app = project
-//  .enablePlugins(SbtOsgi)
-//  .settings(
-//    osgiSettings,
-//    commonSettings,
-//    name := appName,
-//
-//    libraryDependencies ++=
-//      Seq(
-//        "com.typesafe.akka" %% "akka-http-experimental" % akkaStreamVersion,
-//        "com.typesafe.akka" %% "akka-osgi" % akkaVersion,
-//        "org.osgi" % "org.osgi.core" % osgiVersion % Provided,
-//        "org.osgi" % "org.osgi.compendium" % osgiVersion % Provided
-//        //        "org.apache.karaf.bundle" % "org.apache.karaf.bundle.core" % "4.0.3" % Provided
-//      ),
-//    OsgiKeys.bundleSymbolicName := name.value,
-//    OsgiKeys.bundleActivator := Some(s"$basePackage.Activator"),
-//    OsgiKeys.privatePackage := Seq(
-//      basePackage
-//    ),
-//    OsgiKeys.exportPackage ++= Seq(
-//      s"$basePackage.service"
-//    ),
-//
-//    features := Def.task {
-//      val f = target.value / "features.xml"
-//      val node =
-//        <features name={name.value} xmlns="http://karaf.apache.org/xmlns/features/v1.3.0">
-//          <feature name={name.value} version={version.value}>
-//            <bundle>mvn:org.scala-lang/scala-library/{scalaVersion.value}</bundle>
-//            <bundle>mvn:org.scala-lang/scala-reflect/{scalaVersion.value}</bundle>
-//            <bundle>mvn:org.reactivestreams/reactive-streams/1.0.0</bundle>
-//            <bundle>mvn:com.typesafe/config/{typesafeConfigVersion}</bundle>
-//            <bundle>mvn:com.typesafe.akka/akka-osgi_2.11/{akkaVersion}</bundle>
-//            <bundle>mvn:com.typesafe.akka/akka-actor_2.11/{akkaVersion}</bundle>
-//            <bundle>mvn:com.typesafe.akka/akka-stream-experimental_2.11/{akkaStreamVersion}</bundle>
-//            <bundle>mvn:com.typesafe.akka/akka-http-experimental_2.11/{akkaStreamVersion}</bundle>
-//            <bundle>mvn:com.typesafe.akka/akka-http-core-experimental_2.11/{akkaStreamVersion}</bundle>
-//            <bundle>mvn:com.typesafe.akka/akka-parsing-experimental_2.11/{akkaStreamVersion}</bundle>
-//            <bundle>mvn:{organization.value}/{name.value}/{version.value}</bundle>
-//          </feature>
-//        </features>
-//
-//      XML.save(f.absolutePath, node, "UTF-8", true)
-//      f
-//    }.value,
-//
-//    addArtifact( Artifact(appName, "features", "xml", "features"), features )
-//  )
+
+
+lazy val features = project
+  .settings(
+    publishSettings,
+    name := "akkaosgi-features",
+    version := "0.0.0-SNAPSHOT",
+    publishArtifact := false,
+    publishTo := Some(sbtglobal.SbtGlobals.prodRepo),
+
+    featuresXml := Def.task {
+      type PRef = (String, String, String)
+      def ref(p: PRef) =
+        <bundle>mvn:{p._1}/{p._2}/{p._3}</bundle>
+      def feat(p: PRef, refs: PRef*)(inner: NodeSeq = Seq()) =
+        <feature name={p._2} version={p._3}>
+          {refs.map(r => <feature version={r._3}>{r._2}</feature>)}
+          {inner}
+          {ref(p)}
+        </feature>
+
+      val depsRef = ((organization in deps).value, (name in deps).value, (version in deps).value)
+      val systemRef = ((organization in system).value, (name in system).value, (version in system).value)
+      val routeSampleRef = ((organization in routeSample).value, (name in routeSample).value, (version in routeSample).value)
+
+      val f = target.value / "features.xml"
+      f.getParentFile.mkdirs()
+      val node =
+        <features name="akkaosgi" xmlns="http://karaf.apache.org/xmlns/features/v1.3.0">
+          {feat(depsRef)(
+            <bundle>mvn:org.scala-lang/scala-library/{scalaVersion.value}</bundle>
+            <bundle>mvn:org.scala-lang/scala-reflect/{scalaVersion.value}</bundle>
+            <bundle>mvn:org.reactivestreams/reactive-streams/1.0.0</bundle>
+            <bundle>mvn:com.typesafe/config/{typesafeConfigVersion}</bundle>
+            <bundle>mvn:com.typesafe.akka/akka-osgi_2.11/{akkaVersion}</bundle>
+            <bundle>mvn:com.typesafe.akka/akka-actor_2.11/{akkaVersion}</bundle>
+            <bundle>mvn:com.typesafe.akka/akka-stream-experimental_2.11/{akkaStreamVersion}</bundle>
+            <bundle>mvn:com.typesafe.akka/akka-http-experimental_2.11/{akkaStreamVersion}</bundle>
+            <bundle>mvn:com.typesafe.akka/akka-http-core-experimental_2.11/{akkaStreamVersion}</bundle>
+            <bundle>mvn:com.typesafe.akka/akka-parsing-experimental_2.11/{akkaStreamVersion}</bundle>
+            <bundle>mvn:com.github.maprohu/scalarx_2.11/{scalarxVersion}</bundle>
+          )}
+          {feat(systemRef, depsRef)()}
+          {feat(routeSampleRef, systemRef)()}
+        </features>
+
+      XML.save(f.absolutePath, node, "UTF-8", true)
+      f
+    }.value,
+
+    addArtifact( Artifact("akkaosgi-features", "features", "xml"), featuresXml )
+  )
 
 
 lazy val root = (project in file("."))
